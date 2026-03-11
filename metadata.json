@@ -1,0 +1,5 @@
+{
+  "name": "Dr M Bashir Dental Clinic",
+  "description": "Modern and professional dental clinic website for Dr M Bashir in Bedhar, Pakistan.",
+  "requestFramePermissions": ["geolocation"]
+}
