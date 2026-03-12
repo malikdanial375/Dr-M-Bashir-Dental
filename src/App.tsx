@@ -440,6 +440,7 @@ const Booking = () => {
     phone: '',
     service: '',
     date: '',
+    time: '',
     message: ''
   });
   const [status, setStatus] = useState<{ type: 'idle' | 'loading' | 'success' | 'error', message: string }>({
@@ -452,21 +453,35 @@ const Booking = () => {
     setStatus({ type: 'loading', message: 'Sending your request...' });
 
     try {
-      const response = await fetch('/api/appointments', {
+      // Send to Formspree
+      const formspreeResponse = await fetch('https://formspree.io/f/mvzwrpjq', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      // Also keep local backup if possible
+      try {
+        await fetch('/api/appointments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+      } catch (localError) {
+        console.error('Local backup failed:', localError);
+      }
 
-      if (response.ok) {
+      if (formspreeResponse.ok) {
         setStatus({ type: 'success', message: 'Your appointment request has been sent successfully.' });
-        setFormData({ name: '', phone: '', service: '', date: '', message: '' });
+        setFormData({ name: '', phone: '', service: '', date: '', time: '', message: '' });
       } else {
-        throw new Error(data.message || 'Something went wrong');
+        const data = await formspreeResponse.json();
+        throw new Error(data.error || 'Something went wrong with Formspree');
       }
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -611,15 +626,27 @@ const Booking = () => {
                       <option value="checkup">Dental Checkup</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Preferred Date</label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.date}
-                      onChange={(e) => setFormData({...formData, date: e.target.value})}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-medical-blue focus:ring-4 focus:ring-medical-blue/10 outline-none transition-all"
-                    />
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Preferred Date</label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.date}
+                        onChange={(e) => setFormData({...formData, date: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-medical-blue focus:ring-4 focus:ring-medical-blue/10 outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Preferred Time</label>
+                      <input
+                        type="time"
+                        required
+                        value={formData.time}
+                        onChange={(e) => setFormData({...formData, time: e.target.value})}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-medical-blue focus:ring-4 focus:ring-medical-blue/10 outline-none transition-all"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-2">Additional Message</label>

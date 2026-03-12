@@ -24,66 +24,83 @@ async function startServer() {
       phone TEXT,
       service TEXT,
       date TEXT,
+      time TEXT,
       message TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
+  // Migration: Add time column if it doesn't exist
+  try {
+    db.exec("ALTER TABLE appointments ADD COLUMN time TEXT");
+    console.log("Added 'time' column to appointments table.");
+  } catch (e) {
+    // Column likely already exists
+  }
+
   app.use(express.json());
 
   // API routes
   app.post("/api/appointments", async (req, res) => {
-    const { name, phone, service, date, message } = req.body;
+    const { name, phone, service, date, time, message } = req.body;
 
     try {
       // Save to database
       const stmt = db.prepare(
-        "INSERT INTO appointments (name, phone, service, date, message) VALUES (?, ?, ?, ?, ?)"
+        "INSERT INTO appointments (name, phone, service, date, time, message) VALUES (?, ?, ?, ?, ?, ?)"
       );
-      stmt.run(name, phone, service, date, message);
+      stmt.run(name, phone, service, date, time, message);
 
       // Send email notification
       const adminEmail = process.env.ADMIN_EMAIL || "contact.malikdanial@gmail.com";
       
       // Only attempt to send email if SMTP is configured
       if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: parseInt(process.env.SMTP_PORT || "587"),
-          secure: process.env.SMTP_PORT === "465",
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          },
-        });
+        try {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: parseInt(process.env.SMTP_PORT || "587"),
+            secure: process.env.SMTP_PORT === "465",
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            },
+          });
 
-        const mailOptions = {
-          from: process.env.SMTP_FROM || "noreply@drbashirdental.com",
-          to: adminEmail,
-          subject: `New Appointment Request: ${name}`,
-          text: `
-            New appointment request received:
-            
-            Name: ${name}
-            Phone: ${phone}
-            Service: ${service}
-            Date: ${date}
-            Message: ${message}
-          `,
-          html: `
-            <h3>New Appointment Request</h3>
-            <p><strong>Name:</strong> ${name}</p>
-            <p><strong>Phone:</strong> ${phone}</p>
-            <p><strong>Service:</strong> ${service}</p>
-            <p><strong>Date:</strong> ${date}</p>
-            <p><strong>Message:</strong> ${message}</p>
-          `,
-        };
+          const mailOptions = {
+            from: process.env.SMTP_FROM || "noreply@drbashirdental.com",
+            to: adminEmail,
+            subject: `New Appointment Request: ${name}`,
+            text: `
+              New appointment request received:
+              
+              Name: ${name}
+              Phone: ${phone}
+              Service: ${service}
+              Date: ${date}
+              Time: ${time}
+              Message: ${message}
+            `,
+            html: `
+              <h3>New Appointment Request</h3>
+              <p><strong>Name:</strong> ${name}</p>
+              <p><strong>Phone:</strong> ${phone}</p>
+              <p><strong>Service:</strong> ${service}</p>
+              <p><strong>Date:</strong> ${date}</p>
+              <p><strong>Time:</strong> ${time}</p>
+              <p><strong>Message:</strong> ${message}</p>
+            `,
+          };
 
-        await transporter.sendMail(mailOptions);
+          await transporter.sendMail(mailOptions);
+          console.log("Email sent successfully.");
+        } catch (emailError) {
+          console.error("Error sending email notification:", emailError);
+          // We don't fail the whole request if only email fails
+        }
       } else {
         console.log("SMTP not configured. Email not sent, but submission saved to DB.");
-        console.log("Submission details:", { name, phone, service, date, message });
+        console.log("Submission details:", { name, phone, service, date, time, message });
       }
 
       res.status(200).json({ success: true, message: "Your appointment request has been sent successfully." });
