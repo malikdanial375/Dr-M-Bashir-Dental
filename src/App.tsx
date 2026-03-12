@@ -31,7 +31,32 @@ const Navbar = () => {
     { name: 'Services', href: '#services' },
     { name: 'Gallery', href: '#gallery' },
     { name: 'About', href: '#about' },
+    { name: 'Testimonials', href: '#testimonials' },
   ];
+
+  const handleMobileLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
+    setIsOpen(false);
+    
+    // Wait for the menu closing animation to complete before scrolling
+    // to avoid layout shifts interfering with the scroll target
+    setTimeout(() => {
+      const targetId = href.replace('#', '');
+      const element = document.getElementById(targetId);
+      if (element) {
+        const offset = 80; // Height of the fixed navbar
+        const bodyRect = document.body.getBoundingClientRect().top;
+        const elementRect = element.getBoundingClientRect().top;
+        const elementPosition = elementRect - bodyRect;
+        const offsetPosition = elementPosition - offset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }, 350);
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
@@ -67,7 +92,7 @@ const Navbar = () => {
 
           {/* Mobile Menu Toggle */}
           <div className="md:hidden">
-            <button onClick={() => setIsOpen(!isOpen)} className="text-slate-600 p-2">
+            <button onClick={() => setIsOpen(!isOpen)} className="text-slate-600 p-2 focus:outline-none">
               {isOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
@@ -81,6 +106,7 @@ const Navbar = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className="md:hidden bg-white border-b border-slate-100 overflow-hidden"
           >
             <div className="px-4 pt-2 pb-6 space-y-1">
@@ -88,16 +114,16 @@ const Navbar = () => {
                 <a
                   key={link.name}
                   href={link.href}
-                  onClick={() => setIsOpen(false)}
-                  className="block px-3 py-4 text-base font-medium text-slate-600 hover:text-medical-blue hover:bg-medical-light rounded-lg transition-all"
+                  onClick={(e) => handleMobileLinkClick(e, link.href)}
+                  className="block px-4 py-4 text-base font-semibold text-slate-700 hover:text-medical-blue hover:bg-medical-light rounded-xl transition-all active:bg-medical-light/50"
                 >
                   {link.name}
                 </a>
               ))}
               <a
                 href="#book"
-                onClick={() => setIsOpen(false)}
-                className="block w-full text-center bg-medical-blue text-white px-6 py-3 rounded-xl text-base font-semibold mt-4"
+                onClick={(e) => handleMobileLinkClick(e, '#book')}
+                className="block w-full text-center bg-medical-blue text-white px-6 py-4 rounded-xl text-base font-bold mt-4 shadow-lg active:scale-95 transition-all"
               >
                 Book Appointment
               </a>
